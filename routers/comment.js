@@ -24,13 +24,23 @@ router.post("/posts/:id/comments", auth, async (req, res) => {
 
 router.get("/posts/:id/comments",auth,async(req,res)=>{
     try {
+
           const _id = req.params.id
+          
         const userPost = await UserPost.findOne({ _id,$or: [{ published: true }, { owner: req.user._id }]})
         if (!userPost) {
             return res.status(404).send("post not found")
         }
-        const comments= await Comment.find({post:_id})
-        res.status(200).send(comments)
+      let limit = parseInt(req.query.limit)
+      let skip = parseInt(req.query.skip) 
+       if(isNaN(limit)||limit<1)limit=10
+       if(limit>50)limit=50
+       if(isNaN(skip)||skip<0)skip=0
+
+       
+        const comments= await Comment.find({post:_id}).sort({createdAt:1}).skip(skip).limit(limit)
+        const total = await Comment.countDocuments({post:_id})
+        res.status(200).send({total,comments})
     } catch (e) {
        res.status(500).send(e.message) 
     }

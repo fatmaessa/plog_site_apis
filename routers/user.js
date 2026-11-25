@@ -15,8 +15,20 @@ router.post("/users", async (req, res) => {
 
 router.get("/users", auth, async (req, res) => {
     try {
-        const users = await User.find({ _id: { $ne: req.user._id } })
-        res.status(200).send(users)
+        const filter = { _id: { $ne: req.user._id } }
+        if(typeof req.query.search === "string" && req.query.search.length<=50){
+            filter.username = {$regex: req.query.search, $options : "i"}
+        } 
+
+       let limit = parseInt(req.query.limit) 
+      let skip = parseInt(req.query.skip) 
+       if(isNaN(limit)||limit<1)limit=10
+       if(limit>50)limit=50
+       if(isNaN(skip)||skip<0)skip=0
+
+        const users = await User.find(filter).select("username").sort({username:1}).skip(skip).limit(limit)
+        const total = await User.countDocuments(filter)
+        res.status(200).send({total,users})
     } catch (e) {
         res.status(500).send(e.message)
     }
